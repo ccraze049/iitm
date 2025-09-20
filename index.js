@@ -7,14 +7,18 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 
-// --- CONFIGURATION (Hardcoded for Testing - SECURITY WARNING!) ---
-// WARNING: These hardcoded secrets should be moved to environment variables for production
+// --- CONFIGURATION (Environment-aware setup) ---
 const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
 const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
 const GEMINI_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const MONGO_URI =
   "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
+
+// Environment detection
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.env.RENDER || process.env.RAILWAY_STATIC_URL;
+const WEBHOOK_URL = process.env.WEBHOOK_URL || process.env.RENDER_EXTERNAL_URL;
+const USE_WEBHOOK = IS_PRODUCTION && WEBHOOK_URL;
 
 // --- EXPRESS SERVER SETUP ---
 const app = express();
@@ -139,9 +143,27 @@ app.get('/api/logs', (req, res) => {
   res.json(botLogs);
 });
 
+// Webhook endpoint for production
+if (USE_WEBHOOK) {
+  app.use(express.json());
+  app.post(`/webhook/${TELEGRAM_TOKEN}`, (req, res) => {
+    try {
+      bot.handleUpdate(req.body);
+      res.sendStatus(200);
+    } catch (error) {
+      logMessage('error', `Webhook error: ${error.message}`);
+      res.sendStatus(500);
+    }
+  });
+  
+  logMessage('info', 'Webhook endpoint configured for production');
+}
+
 // Start Express server
 app.listen(PORT, '0.0.0.0', () => {
   logMessage('info', `Express server started on http://0.0.0.0:${PORT}`);
+  logMessage('info', `Environment: ${IS_PRODUCTION ? 'Production' : 'Development'}`);
+  logMessage('info', `Bot mode: ${USE_WEBHOOK ? 'Webhook' : 'Polling'}`);
 });
 
 
@@ -476,18 +498,49 @@ process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
 // --- Launch Bot ---
 async function startBot() {
   try {
-    await bot.launch({
-      dropPendingUpdates: true  // This prevents conflict errors
-    });
-    logMessage('info', "🚀 Telegram IIT Madras AI bot running...");
+    if (USE_WEBHOOK) {
+      // Production mode - use webhook
+      const webhookUrl = `${WEBHOOK_URL}/webhook/${TELEGRAM_TOKEN}`;
+      await bot.telegram.setWebhook(webhookUrl);
+      logMessage('info', `🎯 Webhook set: ${webhookUrl}`);
+      logMessage('info', "🚀 Bot running in WEBHOOK mode (Production)");
+    } else {
+      // Development mode - use polling
+      if (IS_PRODUCTION) {
+        logMessage('warn', 'Production detected but webhook URL not available. Bot will not start to prevent conflicts.');
+        logMessage('info', '💡 To run in production, set WEBHOOK_URL environment variable.');
+        return;
+      }
+      
+      await bot.launch({
+        dropPendingUpdates: true  // This prevents conflict errors
+      });
+      logMessage('info', "🚀 Bot running in POLLING mode (Development)");
+    }
+    
+    logMessage('info', "✅ Telegram IIT Madras AI bot is ready!");
     logMessage('info', `📊 Express logs server running at http://localhost:${PORT}`);
   } catch (error) {
     logMessage('error', `Failed to start bot: ${error.message}`);
+    
     if (error.message.includes('Conflict: terminated by other getUpdates request')) {
-      logMessage('warn', 'Another bot instance might be running. Waiting before retry...');
+      logMessage('error', '🚨 CONFLICT DETECTED: Another bot instance is running!');
+      logMessage('info', '💡 This usually means the bot is already deployed in production.');
+      logMessage('info', '🛑 Stopping local instance to prevent conflicts...');
+      return;
+    }
+    
+    if (error.message.includes('webhook') && USE_WEBHOOK) {
+      logMessage('warn', 'Webhook setup failed. Retrying in 5 seconds...');
       setTimeout(() => startBot(), 5000);
     }
   }
 }
 
-startBot();
+// Only start the bot if not in production or if webhook is properly configured
+if (!IS_PRODUCTION || USE_WEBHOOK) {
+  startBot();
+} else {
+  logMessage('info', '⏸️  Bot startup skipped - Production environment detected without webhook URL');
+  logMessage('info', '💡 Bot is likely already running on your deployment platform');
+}
