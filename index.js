@@ -19,26 +19,29 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// Test Gemini API on startup
-async function testGeminiAPI() {
-  try {
-    console.log("Testing Gemini API...");
-    const testResponse = await callGemini("Say hello in Hindi and English");
-    console.log("Gemini API Test Result:", testResponse);
-  } catch (error) {
-    console.error("Gemini API Test Failed:", error.message);
-  }
-}
+// Optional: Test Gemini API on startup (disabled for production)
+// setTimeout(() => callGemini("Test").then(r => console.log("API OK:", r.substring(0,20))), 2000);
 
-// Run test after MongoDB connects
-setTimeout(testGeminiAPI, 2000);
+// User Schema
+const userSchema = new mongoose.Schema({
+  userId: { type: String, required: true, unique: true },
+  username: String,
+  firstName: String,
+  lastName: String,
+  registeredAt: { type: Date, default: Date.now },
+  isActive: { type: Boolean, default: true },
+});
+const User = mongoose.model("User", userSchema);
 
+// Message Schema
 const messageSchema = new mongoose.Schema({
   userId: String,
   question: String,
   answer: String,
   timestamp: { type: Date, default: Date.now },
 });
+// Add index for better performance
+messageSchema.index({ userId: 1, timestamp: -1 });
 const Message = mongoose.model("Message", messageSchema);
 
 // --- Language Detection ---
@@ -51,7 +54,6 @@ const detectLanguage = (text) => {
 // --- Gemini API Handler ---
 async function callGemini(prompt) {
   try {
-    console.log("Calling Gemini API...");
     const response = await axios.post(
       GEMINI_BASE_URL,
       {
@@ -70,22 +72,14 @@ async function callGemini(prompt) {
       },
     );
     
-    console.log("Gemini API Response Status:", response.status);
-    console.log("Response Data:", JSON.stringify(response.data, null, 2));
-    
     const aiResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (aiResponse) {
-      console.log("AI Response received successfully");
       return aiResponse;
     } else {
-      console.log("No valid response from Gemini API");
       return "मुझे इसका उत्तर नहीं पता।";
     }
   } catch (error) {
-    console.error("Gemini API Error Details:");
-    console.error("Status:", error.response?.status);
-    console.error("Data:", error.response?.data);
-    console.error("Message:", error.message);
+    console.error("Gemini API Error:", error.response?.status || error.message);
     return "मुझे इसका उत्तर नहीं पता।";
   }
 }
@@ -93,16 +87,90 @@ async function callGemini(prompt) {
 // --- Bot Initialization ---
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
+// --- User Registration Helper ---
+async function registerUser(ctx) {
+  const { id, username, first_name, last_name } = ctx.from;
+  try {
+    const user = await User.findOneAndUpdate(
+      { userId: String(id) },
+      { 
+        username: username || "",
+        firstName: first_name || "",
+        lastName: last_name || "",
+        isActive: true 
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    return user;
+  } catch (error) {
+    console.error("User registration error:", error);
+    return null;
+  }
+}
+
+// --- Registration Check Middleware ---
+async function ensureRegistered(ctx, next) {
+  const text = ctx.message?.text;
+  if (!text || text.startsWith('/start')) return next();
+  
+  const userId = String(ctx.from.id);
+  const exists = await User.exists({ userId, isActive: true });
+  if (!exists) {
+    return ctx.reply(
+      "कृपया पहले /start कमांड भेजें। 🚀\n\n" +
+      "Please send /start command first to register and begin chatting!"
+    );
+  }
+  return next();
+}
+
+bot.use(ensureRegistered);
+
+// --- /start Command Handler ---
+bot.start(async (ctx) => {
+  try {
+    const user = await registerUser(ctx);
+    if (!user) {
+      return ctx.reply("रजिस्ट्रेशन में समस्या हुई। कृपया दोबारा कोशिश करें।");
+    }
+
+    const firstName = user.firstName || "Friend";
+    const isExisting = await Message.exists({ userId: String(ctx.from.id) });
+
+    if (isExisting) {
+      await ctx.reply(
+        `👋 स्वागत है ${firstName}!\n\n` +
+        `Welcome back! I remember our previous conversations.\n\n` +
+        `IIT मद्रास के बारे में कोई भी सवाल पूछें! 📚`
+      );
+    } else {
+      await ctx.reply(
+        `🎉 स्वागत है ${firstName}!\n\n` +
+        `Welcome to IIT Madras AI Bot! 🎓\n\n` +
+        `मैं IIT मद्रास के बारे में जानकारी दे सकता हूं:\n` +
+        `• कोर्सेज और विभाग\n` +
+        `• प्रवेश प्रक्रिया\n` +
+        `• फैकल्टी और सुविधाएं\n` +
+        `• इवेंट्स और गतिविधियां\n\n` +
+        `मुझसे हिंदी या अंग्रेजी में कोई भी सवाल पूछें! 💬`
+      );
+    }
+  } catch (error) {
+    console.error("Start command error:", error);
+    ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
+  }
+});
+
 // --- Main Handler ---
 bot.on("text", async (ctx) => {
   try {
     const userId = ctx.from.id.toString();
     const question = ctx.message.text;
 
-    // Fetch last 5 messages for context
+    // Fetch last 20 messages for better context
     const recentMessages = await Message.find({ userId })
       .sort({ timestamp: -1 })
-      .limit(5)
+      .limit(20)
       .lean();
 
     const history = recentMessages
