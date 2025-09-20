@@ -247,6 +247,9 @@ bot.on("text", async (ctx) => {
       );
     }
     
+    // Show typing animation while processing
+    await ctx.sendChatAction('typing');
+    
     // Fetch last 20 messages for better context
     const recentMessages = await Message.find({ userId })
       .sort({ timestamp: -1 })
