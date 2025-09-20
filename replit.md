@@ -27,16 +27,16 @@ The following secrets need to be configured in Replit's Secrets tab:
 - Dependencies: telegraf, mongoose, axios, franc, axios-retry
 
 ## Recent Changes
-- Converted hardcoded API keys to environment variables for security
-- Added proper error handling for missing environment variables
+- Set up Node.js environment and installed dependencies
 - Configured Replit workflow for bot execution
 - Set up deployment configuration for production use
-- Added validation for required environment variables
+- Bot is running successfully with hardcoded credentials
 
 ## Setup Instructions
-1. Set up the required environment variables in Replit Secrets
-2. The bot will automatically start via the configured workflow
-3. Deploy to production using the configured deployment settings
+1. The bot starts automatically via the configured workflow
+2. MongoDB is connected and working
+3. Ready to receive Telegram messages about IIT Madras
+4. Deploy to production using the configured deployment settings
 
 ## Deployment
 - Target: VM (for persistent bot operation)

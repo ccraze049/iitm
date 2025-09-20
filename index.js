@@ -4,45 +4,34 @@ const mongoose = require("mongoose");
 const axios = require("axios");
 const { franc } = require("franc");
 
-// --- CONFIGURATION (Environment Variables) ---
+// --- CONFIGURATION (Hardcoded) ---
 const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
 const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
+const GEMINI_BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const MONGO_URI =
+  "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
 
-
-// Validate required environment variables
-if (!TELEGRAM_TOKEN) {
-    console.error("Error: TELEGRAM_TOKEN environment variable is required");
-    process.exit(1);
-}
-if (!GEMINI_API_KEY) {
-    console.error("Error: GEMINI_API_KEY environment variable is required");
-    process.exit(1);
-}
-if (!MONGO_URI) {
-    console.error("Error: MONGO_URI environment variable is required");
-    process.exit(1);
-}
 
 // --- MongoDB Setup ---
-mongoose.connect(MONGO_URI)
-    .then(() => console.log("MongoDB Connected"))
-    .catch(err => console.error("MongoDB connection error:", err));
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 const messageSchema = new mongoose.Schema({
-    userId: String,
-    question: String,
-    answer: String,
-    timestamp: { type: Date, default: Date.now }
+  userId: String,
+  question: String,
+  answer: String,
+  timestamp: { type: Date, default: Date.now },
 });
 const Message = mongoose.model("Message", messageSchema);
 
 // --- Language Detection ---
 const detectLanguage = (text) => {
-    const langCode = franc(text);
-    if (langCode === "hin") return "Hindi";
-    return "English";
+  const langCode = franc(text);
+  if (langCode === "hin") return "Hindi";
+  return "English";
 };
 
 // --- Gemini API Handler ---
@@ -53,21 +42,22 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            parts: [
-              { text: prompt }
-            ]
-          }
-        ]
+            parts: [{ text: prompt }],
+          },
+        ],
       },
       {
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY
+          "x-goog-api-key": GEMINI_API_KEY,
         },
         timeout: 60000,
-      }
+      },
     );
-    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "मुझे इसका उत्तर नहीं पता।";
+    return (
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "मुझे इसका उत्तर नहीं पता।"
+    );
   } catch (error) {
     console.error("Gemini API Error:", error.response?.data || error.message);
     return "मुझे इसका उत्तर नहीं पता।";
@@ -89,9 +79,11 @@ bot.on("text", async (ctx) => {
       .limit(5)
       .lean();
 
-    const history = recentMessages.slice().reverse().map(q =>
-      `Q: ${q.question}\nA: ${q.answer}`
-    ).join("\n");
+    const history = recentMessages
+      .slice()
+      .reverse()
+      .map((q) => `Q: ${q.question}\nA: ${q.answer}`)
+      .join("\n");
 
     const language = detectLanguage(question);
 
@@ -119,7 +111,6 @@ Your Answer:
 
     // Reply to user
     ctx.reply(answer);
-
   } catch (err) {
     console.error(err);
     ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
@@ -139,4 +130,3 @@ process.once("SIGTERM", () => {
 // --- Launch Bot ---
 bot.launch();
 console.log("Telegram IIT Madras AI bot running...");
-
