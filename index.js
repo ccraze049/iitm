@@ -65,6 +65,22 @@ const detectLanguage = (text) => {
   return "English";
 };
 
+// --- Telegram Formatting Helper ---
+const formatForTelegram = (text) => {
+  // Convert standard markdown to Telegram-compatible format
+  let formatted = text
+    // Convert ** bold to * bold for Telegram
+    .replace(/\*\*(.*?)\*\*/g, '*$1*')
+    // Convert * bullet points to • for better display
+    .replace(/^\s*\*\s+/gm, '• ')
+    // Clean up excessive newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Escape special characters that might interfere with Telegram markdown
+    .replace(/([_`\[\]])/g, '\\$1');
+  
+  return formatted.trim();
+};
+
 // --- Gemini API Handler ---
 async function callGemini(prompt) {
   try {
@@ -265,7 +281,12 @@ Instructions:
 2. Always consider the user's previous questions and answers (history) for context.
 3. If you don't know the answer, politely say you don’t know.
 4. Keep answers concise, clear, and only related to IIT Madras.
-5. Format your answer to be suitable for a Telegram message.
+5. Format your answer for Telegram messaging - use simple formatting:
+   - For bold text, use *bold text*
+   - For lists, use simple bullet points with • or -
+   - Avoid complex markdown formatting
+   - Keep formatting minimal and readable
+6. Do not use ** for bold, use * instead for Telegram compatibility.
 Conversation History:
 ${history}
 User Question:
@@ -274,13 +295,16 @@ Your Answer:
 `;
 
     // Call Gemini API for response
-    const answer = await callGemini(geminiPrompt);
+    let answer = await callGemini(geminiPrompt);
+
+    // Format answer for Telegram compatibility
+    answer = formatForTelegram(answer);
 
     // Save Q&A to DB
     await Message.create({ userId, question, answer, timestamp: new Date() });
 
-    // Reply to user
-    ctx.reply(answer);
+    // Reply to user with Markdown formatting
+    ctx.reply(answer, { parse_mode: 'Markdown' });
   } catch (err) {
     console.error(err);
     ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
