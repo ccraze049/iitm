@@ -8,7 +8,7 @@ const { franc } = require("franc");
 const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
 const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
 const GEMINI_BASE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const MONGO_URI =
   "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
 
@@ -18,6 +18,20 @@ mongoose
   .connect(MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+// Test Gemini API on startup
+async function testGeminiAPI() {
+  try {
+    console.log("Testing Gemini API...");
+    const testResponse = await callGemini("Say hello in Hindi and English");
+    console.log("Gemini API Test Result:", testResponse);
+  } catch (error) {
+    console.error("Gemini API Test Failed:", error.message);
+  }
+}
+
+// Run test after MongoDB connects
+setTimeout(testGeminiAPI, 2000);
 
 const messageSchema = new mongoose.Schema({
   userId: String,
@@ -37,6 +51,7 @@ const detectLanguage = (text) => {
 // --- Gemini API Handler ---
 async function callGemini(prompt) {
   try {
+    console.log("Calling Gemini API...");
     const response = await axios.post(
       GEMINI_BASE_URL,
       {
@@ -54,12 +69,23 @@ async function callGemini(prompt) {
         timeout: 60000,
       },
     );
-    return (
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "मुझे इसका उत्तर नहीं पता।"
-    );
+    
+    console.log("Gemini API Response Status:", response.status);
+    console.log("Response Data:", JSON.stringify(response.data, null, 2));
+    
+    const aiResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (aiResponse) {
+      console.log("AI Response received successfully");
+      return aiResponse;
+    } else {
+      console.log("No valid response from Gemini API");
+      return "मुझे इसका उत्तर नहीं पता।";
+    }
   } catch (error) {
-    console.error("Gemini API Error:", error.response?.data || error.message);
+    console.error("Gemini API Error Details:");
+    console.error("Status:", error.response?.status);
+    console.error("Data:", error.response?.data);
+    console.error("Message:", error.message);
     return "मुझे इसका उत्तर नहीं पता।";
   }
 }
