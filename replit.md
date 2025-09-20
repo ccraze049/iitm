@@ -10,10 +10,12 @@ This is a specialized Telegram chatbot that provides information about IIT Madra
 - **Language**: Supports Hindi and English with automatic language detection
 
 ## Key Features
+- User registration system with /start command
 - Intelligent responses about IIT Madras information
-- Conversation history for context-aware responses
+- Enhanced conversation history (20 messages) for context-aware responses
 - Automatic language detection (Hindi/English)
-- Secure API key management via environment variables
+- Personalized responses based on user registration and history
+- Database indexing for improved performance
 
 ## Required Environment Variables
 The following secrets need to be configured in Replit's Secrets tab:
@@ -27,16 +29,20 @@ The following secrets need to be configured in Replit's Secrets tab:
 - Dependencies: telegraf, mongoose, axios, franc, axios-retry
 
 ## Recent Changes
-- Set up Node.js environment and installed dependencies
-- Configured Replit workflow for bot execution
-- Set up deployment configuration for production use
-- Bot is running successfully with hardcoded credentials
+- Implemented user registration system with User schema
+- Added /start command handler for user onboarding
+- Enhanced conversation history from 5 to 20 messages for better AI context
+- Added database indexing for performance optimization
+- Implemented middleware to ensure user registration before chat
+- Bot now provides personalized responses based on user history
+- Disabled startup API test for production efficiency
 
 ## Setup Instructions
-1. The bot starts automatically via the configured workflow
-2. MongoDB is connected and working
-3. Ready to receive Telegram messages about IIT Madras
-4. Deploy to production using the configured deployment settings
+1. Users must send /start command to register before chatting
+2. Bot automatically saves and uses conversation history for context
+3. Supports both new user welcome and returning user recognition
+4. MongoDB is connected with optimized indexing for performance
+5. Deploy to production using the configured deployment settings
 
 ## Deployment
 - Target: VM (for persistent bot operation)
