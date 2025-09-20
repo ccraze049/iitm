@@ -247,8 +247,8 @@ bot.on("text", async (ctx) => {
       );
     }
     
-    // Show typing animation while processing
-    await ctx.sendChatAction('typing');
+    // Show thinking message while processing
+    const thinkingMessage = await ctx.reply("🤔 Thinking...");
     
     // Fetch last 20 messages for better context
     const recentMessages = await Message.find({ userId })
@@ -294,8 +294,14 @@ Your Answer:
     // Save Q&A to DB
     await Message.create({ userId, question, answer, timestamp: new Date() });
 
-    // Reply to user with Markdown formatting
-    ctx.reply(answer, { parse_mode: 'Markdown' });
+    // Edit the thinking message with actual response
+    await ctx.telegram.editMessageText(
+      ctx.chat.id,
+      thinkingMessage.message_id,
+      null,
+      answer,
+      { parse_mode: 'Markdown' }
+    );
   } catch (err) {
     console.error(err);
     ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");

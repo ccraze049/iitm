@@ -16,7 +16,7 @@ This is a specialized Telegram chatbot that provides information about IIT Madra
 - Automatic language detection (Hindi/English)
 - Personalized responses based on user registration and history
 - Database indexing for improved performance
-- Typing animation while processing user queries
+- "🤔 Thinking..." message while processing user queries
 - Telegram markdown formatting for proper text display
 
 ## Required Environment Variables
