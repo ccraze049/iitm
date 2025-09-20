@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
   username: String,
   firstName: String,
   lastName: String,
+  preferredLanguage: { type: String, enum: ['hindi', 'english'], default: null },
   registeredAt: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true },
 });
@@ -137,27 +138,78 @@ bot.start(async (ctx) => {
     const firstName = user.firstName || "Friend";
     const isExisting = await Message.exists({ userId: String(ctx.from.id) });
 
-    if (isExisting) {
-      await ctx.reply(
-        `👋 स्वागत है ${firstName}!\n\n` +
-        `Welcome back! I remember our previous conversations.\n\n` +
-        `IIT मद्रास के बारे में कोई भी सवाल पूछें! 📚`
-      );
+    if (isExisting && user.preferredLanguage) {
+      // Returning user with language preference set
+      const welcomeMsg = user.preferredLanguage === 'hindi' 
+        ? `👋 स्वागत है ${firstName}!\n\nIIT मद्रास के बारे में कोई भी सवाल पूछें! 📚`
+        : `👋 Welcome back ${firstName}!\n\nAsk me anything about IIT Madras! 📚`;
+      
+      await ctx.reply(welcomeMsg);
     } else {
-      await ctx.reply(
-        `🎉 स्वागत है ${firstName}!\n\n` +
+      // New user or user without language preference - show language selection
+      const welcomeText = 
+        `🎉 स्वागत है ${firstName}! Welcome ${firstName}!\n\n` +
+        `IIT Madras AI Bot में आपका स्वागत है! 🎓\n` +
         `Welcome to IIT Madras AI Bot! 🎓\n\n` +
-        `मैं IIT मद्रास के बारे में जानकारी दे सकता हूं:\n` +
-        `• कोर्सेज और विभाग\n` +
-        `• प्रवेश प्रक्रिया\n` +
-        `• फैकल्टी और सुविधाएं\n` +
-        `• इवेंट्स और गतिविधियां\n\n` +
-        `मुझसे हिंदी या अंग्रेजी में कोई भी सवाल पूछें! 💬`
-      );
+        `कृपया अपनी पसंदीदा भाषा चुनें:\n` +
+        `Please select your preferred language:`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: "🇮🇳 हिंदी (Hindi)", callback_data: "lang_hindi" },
+            { text: "🇬🇧 English", callback_data: "lang_english" }
+          ]
+        ]
+      };
+
+      await ctx.reply(welcomeText, { reply_markup: keyboard });
     }
   } catch (error) {
     console.error("Start command error:", error);
     ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
+  }
+});
+
+// --- Language Selection Callback Handler ---
+bot.action(['lang_hindi', 'lang_english'], async (ctx) => {
+  try {
+    const userId = String(ctx.from.id);
+    const selectedLang = ctx.match[0] === 'lang_hindi' ? 'hindi' : 'english';
+    
+    // Update user's preferred language
+    await User.findOneAndUpdate(
+      { userId },
+      { preferredLanguage: selectedLang }
+    );
+
+    // Send confirmation message in selected language
+    if (selectedLang === 'hindi') {
+      await ctx.editMessageText(
+        `✅ भाषा सेट की गई: हिंदी\n\n` +
+        `🎓 मैं IIT मद्रास के बारे में जानकारी दे सकता हूं:\n` +
+        `• कोर्सेज और विभाग\n` +
+        `• प्रवेश प्रक्रिया\n` +
+        `• फैकल्टी और सुविधाएं\n` +
+        `• इवेंट्स और गतिविधियां\n\n` +
+        `मुझसे कोई भी सवाल पूछें! 💬`
+      );
+    } else {
+      await ctx.editMessageText(
+        `✅ Language set: English\n\n` +
+        `🎓 I can provide information about IIT Madras:\n` +
+        `• Courses and Departments\n` +
+        `• Admission Process\n` +
+        `• Faculty and Facilities\n` +
+        `• Events and Activities\n\n` +
+        `Ask me anything! 💬`
+      );
+    }
+
+    console.log(`User ${ctx.from.first_name} (${userId}) selected language: ${selectedLang}`);
+  } catch (error) {
+    console.error("Language selection error:", error);
+    ctx.reply("भाषा सेटिंग में समस्या हुई। / Language setting error.");
   }
 });
 
@@ -167,6 +219,17 @@ bot.on("text", async (ctx) => {
     const userId = ctx.from.id.toString();
     const question = ctx.message.text;
 
+    // Get user info for personalized responses
+    const user = await User.findOne({ userId });
+    
+    // Check if user has set language preference
+    if (!user.preferredLanguage) {
+      return ctx.reply(
+        "कृपया पहले /start कमांड भेजकर अपनी भाषा चुनें।\n\n" +
+        "Please send /start command first to select your language! 🚀"
+      );
+    }
+    
     // Fetch last 20 messages for better context
     const recentMessages = await Message.find({ userId })
       .sort({ timestamp: -1 })
@@ -179,7 +242,7 @@ bot.on("text", async (ctx) => {
       .map((q) => `Q: ${q.question}\nA: ${q.answer}`)
       .join("\n");
 
-    const language = detectLanguage(question);
+    const language = user.preferredLanguage === 'hindi' ? 'Hindi' : 'English';
 
     const geminiPrompt = `
 You are an intelligent chatbot specialized in IIT Madras information.
