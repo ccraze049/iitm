@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs used for coverage
+coverage
+.nyc_output
+coverage/
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# dotenv environment variables file (if you use it in future)
+.env
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# VSCode settings folder
+.vscode/
+
+# Temporary system files
+*.swp
+*.swo
+
+# Build output (if any build process exists)
+dist/
+build/
+
+# Misc
+.idea/
+*.log.*
+
+
