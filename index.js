@@ -4,11 +4,25 @@ const mongoose = require("mongoose");
 const axios = require("axios");
 const { franc } = require("franc");
 
-// --- CONFIGURATION (Hardcoded) ---
-const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
-const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
+// --- CONFIGURATION (Environment Variables) ---
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
+const MONGO_URI = process.env.MONGO_URI;
+
+// Validate required environment variables
+if (!TELEGRAM_TOKEN) {
+    console.error("Error: TELEGRAM_TOKEN environment variable is required");
+    process.exit(1);
+}
+if (!GEMINI_API_KEY) {
+    console.error("Error: GEMINI_API_KEY environment variable is required");
+    process.exit(1);
+}
+if (!MONGO_URI) {
+    console.error("Error: MONGO_URI environment variable is required");
+    process.exit(1);
+}
 
 // --- MongoDB Setup ---
 mongoose.connect(MONGO_URI)
