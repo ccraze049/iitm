@@ -3,6 +3,7 @@ const { Telegraf } = require("telegraf");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const { franc } = require("franc");
+const express = require("express");
 
 // Local Data Files
 const feesData = require("./fees");
@@ -15,6 +16,168 @@ const GEMINI_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
 
+// --- Logs Storage ---
+const botLogs = [];
+const maxLogs = 1000; // Keep last 1000 logs
+
+// Custom console logging function
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = (...args) => {
+  const timestamp = new Date().toISOString();
+  const message = args.join(' ');
+  botLogs.push({ timestamp, level: 'INFO', message });
+  if (botLogs.length > maxLogs) botLogs.shift();
+  originalLog(`[${timestamp}] INFO:`, ...args);
+};
+
+console.error = (...args) => {
+  const timestamp = new Date().toISOString();
+  const message = args.join(' ');
+  botLogs.push({ timestamp, level: 'ERROR', message });
+  if (botLogs.length > maxLogs) botLogs.shift();
+  originalError(`[${timestamp}] ERROR:`, ...args);
+};
+
+// --- Express Server Setup ---
+const app = express();
+const PORT = 5000;
+
+app.use(express.static('public'));
+
+app.get('/', (req, res) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>IIT Madras Bot - Logs Dashboard</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body { 
+                font-family: 'Courier New', monospace; 
+                background: #1e1e1e; 
+                color: #d4d4d4; 
+                margin: 0; 
+                padding: 20px; 
+            }
+            .header {
+                background: #2d3748;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            .stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            .stat-card {
+                background: #2d3748;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            .logs-container { 
+                background: #252526; 
+                border: 1px solid #3e3e42; 
+                border-radius: 8px; 
+                padding: 20px; 
+                max-height: 600px; 
+                overflow-y: auto; 
+            }
+            .log-entry { 
+                margin-bottom: 8px; 
+                padding: 8px; 
+                border-radius: 4px; 
+                font-size: 13px; 
+                line-height: 1.4; 
+            }
+            .log-info { background: #1a2332; border-left: 3px solid #007acc; }
+            .log-error { background: #2d1b1b; border-left: 3px solid #f14c4c; }
+            .timestamp { color: #608b4e; font-weight: bold; }
+            .level { 
+                display: inline-block; 
+                padding: 2px 8px; 
+                border-radius: 12px; 
+                font-size: 11px; 
+                font-weight: bold; 
+            }
+            .level-info { background: #007acc; color: white; }
+            .level-error { background: #f14c4c; color: white; }
+            .refresh-btn {
+                background: #007acc;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-bottom: 20px;
+                font-size: 14px;
+            }
+            .refresh-btn:hover { background: #005a9e; }
+            h1 { color: #569cd6; margin: 0; }
+            h2 { color: #4ec9b0; }
+        </style>
+        <script>
+            function refreshLogs() {
+                location.reload();
+            }
+            setInterval(refreshLogs, 30000); // Auto refresh every 30 seconds
+        </script>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🤖 IIT Madras AI Bot - Live Dashboard</h1>
+            <p>Real-time monitoring of Telegram bot activity</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Logs</h3>
+                <h2>${botLogs.length}</h2>
+            </div>
+            <div class="stat-card">
+                <h3>Bot Status</h3>
+                <h2>🟢 Running</h2>
+            </div>
+            <div class="stat-card">
+                <h3>Last Updated</h3>
+                <h2>${new Date().toLocaleTimeString()}</h2>
+            </div>
+        </div>
+        
+        <button class="refresh-btn" onclick="refreshLogs()">🔄 Refresh Logs</button>
+        
+        <div class="logs-container">
+            <h2>📋 Live Logs (Latest ${botLogs.length} entries)</h2>
+            ${botLogs.slice(-100).reverse().map(log => `
+                <div class="log-entry log-${log.level.toLowerCase()}">
+                    <span class="timestamp">[${new Date(log.timestamp).toLocaleTimeString()}]</span>
+                    <span class="level level-${log.level.toLowerCase()}">${log.level}</span>
+                    <span>${log.message}</span>
+                </div>
+            `).join('')}
+            ${botLogs.length === 0 ? '<p style="color: #888;">No logs yet... Bot starting up...</p>' : ''}
+        </div>
+    </body>
+    </html>
+  `;
+  res.send(html);
+});
+
+app.get('/api/logs', (req, res) => {
+  res.json({ logs: botLogs, count: botLogs.length });
+});
+
+// Start Express Server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 Dashboard server running on http://0.0.0.0:${PORT}`);
+  console.log(`📊 View logs at: http://0.0.0.0:${PORT}`);
+});
 
 // --- MongoDB Setup ---
 mongoose
