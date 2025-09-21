@@ -27,7 +27,7 @@
     }
   },
   "env": {
-    "TELEGRAM_TOKEN": "@telegram_token",
+    "TELEGRAM_TOKEN": ""7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E",
     "GEMINI_API_KEY": "@gemini_api_key", 
     "MONGO_URI": "@mongo_uri"
   }
