@@ -72,24 +72,41 @@ const searchFeesData = (query) => {
       relevantData.btech = feesData.btech;
     }
     
+    if (lowerQuery.includes('dual') || lowerQuery.includes('iddd') || 
+        lowerQuery.includes('integrated') || lowerQuery.includes('5 year') || 
+        lowerQuery.includes('5-year') || lowerQuery.includes('five year')) {
+      relevantData.dualDegree = feesData.dualDegree;
+    }
+    
     if (lowerQuery.includes('mtech') || lowerQuery.includes('m.tech') || 
         lowerQuery.includes('postgraduate') || lowerQuery.includes('pg')) {
       relevantData.mtech = feesData.mtech;
     }
     
-    if (lowerQuery.includes('mba')) {
+    if (lowerQuery.includes('mba') && !lowerQuery.includes('executive')) {
       relevantData.mba = feesData.mba;
     }
     
-    if (lowerQuery.includes('phd') || lowerQuery.includes('doctorate') || 
-        lowerQuery.includes('research')) {
+    if ((lowerQuery.includes('m.a') || lowerQuery.includes('master of arts') || 
+        (lowerQuery.includes(' ma ') || lowerQuery.startsWith('ma ') || lowerQuery.endsWith(' ma'))) 
+        && !lowerQuery.includes('mba')) {
+      relevantData.ma = feesData.ma;
+    }
+    
+    if (lowerQuery.includes('executive mba') || lowerQuery.includes('emba') || 
+        lowerQuery.includes('executive')) {
+      relevantData.emba = feesData.emba;
+    }
+    
+    if (lowerQuery.includes('phd') || lowerQuery.includes('ph.d') || 
+        lowerQuery.includes('doctorate') || lowerQuery.includes('research')) {
       relevantData.phd = feesData.phd;
     }
     
     if (lowerQuery.includes('bs') || lowerQuery.includes('b.s') || 
         lowerQuery.includes('online') || lowerQuery.includes('programming') ||
         lowerQuery.includes('data science') || lowerQuery.includes('bachelor')) {
-      relevantData.onlineBs = feesData.onlineBs;
+      relevantData.bsDegree = feesData.bsDegree;
     }
     
     if (lowerQuery.includes('hostel') || lowerQuery.includes('mess') || 

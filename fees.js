@@ -1,129 +1,191 @@
-// IIT Madras Fee Structure Data
 const feesData = {
-  // Undergraduate Fees (B.Tech)
+
+  // B.Tech / B.S. Fees (GEN/OBC/SC/ST/Int'l)
   btech: {
-    courseName: "B.Tech",
+    courseName: "B.Tech / B.S.",
     duration: "4 years",
     fees: {
-      tuitionFee: {
-        general: 200000, // per year
-        obc: 200000,
-        scSt: 0,
-        economicallyWeaker: 0
-      },
-      otherFees: {
-        admission: 25000,
-        caution: 5000,
-        medical: 300,
-        students_activity: 2000,
-        games: 2000,
-        institute_deposit: 5000
-      },
+      tuitionFee: { general: 200000, obc: 200000, sc: 0, st: 0 },
+      admissionFee: 3500,
+      cautionDeposit: 2000,
+      medicalExam: 300,
+      instituteFee: 1500,
+      studentWellness: 500,
+      extracurricular: 2500,
+      medicalInsurance: 2402,
       totalFirstYear: {
-        general: 239300,
-        obc: 239300,
-        scSt: 39300,
-        economicallyWeaker: 39300
+        general: 213702,
+        obc: 213702,
+        sc: 13602,
+        st: 13602
       }
     }
   },
 
-  // Postgraduate Fees (M.Tech)
+  // Dual Degree (GEN/OBC/SC/ST/Int'l)
+  dualDegree: {
+    courseName: "Dual Degree / IDDD",
+    duration: "5 years",
+    fees: {
+      tuitionFee: { general: 200000, obc: 200000, sc: 0, st: 0 },
+      admissionFee: 3500,
+      cautionDeposit: 2000,
+      medicalExam: 300,
+      instituteFee: 1500,
+      studentWellness: 500,
+      extracurricular: 2500,
+      medicalInsurance: 2402,
+      totalFirstYear: {
+        general: 213602,
+        obc: 213602,
+        sc: 13602,
+        st: 13602
+      }
+    }
+  },
+
+  // M.Tech Fees (GEN/OBC/SC/ST/Int'l)
   mtech: {
     courseName: "M.Tech",
     duration: "2 years",
     fees: {
-      tuitionFee: {
-        general: 62500, // per semester
-        obc: 62500,
-        scSt: 0,
-        economicallyWeaker: 0
-      },
-      otherFees: {
-        admission: 25000,
-        caution: 10000,
-        medical: 300,
-        students_activity: 1000,
-        games: 1000,
-        institute_deposit: 5000
-      },
+      tuitionFee: { general: 25000, obc: 25000, sc: 0, st: 0 },
+      admissionFee: 1500,
+      cautionDeposit: 2000,
+      medicalExam: 300,
+      instituteFee: 1500,
+      studentWellness: 500,
+      extracurricular: 1500,
+      medicalInsurance: 2402,
       totalFirstSemester: {
-        general: 104800,
-        obc: 104800,
-        scSt: 42300,
-        economicallyWeaker: 42300
+        general: 34402,
+        obc: 34402,
+        sc: 9402,
+        st: 9402
       }
     }
   },
 
-  // MBA Fees
+  // M.A. Fees (GEN/OBC/SC/ST/Int'l)
+  ma: {
+    courseName: "M.A.",
+    duration: "2 years",
+    fees: {
+      tuitionFee: { general: 25000, obc: 25000, sc: 0, st: 0 },
+      admissionFee: 1500,
+      cautionDeposit: 2000,
+      medicalExam: 300,
+      instituteFee: 1500,
+      studentWellness: 500,
+      extracurricular: 1500,
+      medicalInsurance: 2402,
+      totalFirstSemester: {
+        general: 34402,
+        obc: 34402,
+        sc: 9402,
+        st: 9402
+      }
+    }
+  },
+
+  // MBA (GEN/OBC/SC/ST/Int'l)
   mba: {
     courseName: "MBA",
     duration: "2 years",
     fees: {
       tuitionFee: {
-        general: 550000, // total program fee
-        obc: 550000,
-        scSt: 275000,
-        economicallyWeaker: 275000
+        "2023": { general: 350000, obc: 350000, sc: 0, st: 0 },
+        "2024": { general: 400000, obc: 400000, sc: 0, st: 0 }
       },
-      otherFees: {
-        admission: 50000,
-        caution: 20000,
-        medical: 500,
-        students_activity: 3000
+      admissionFee: 10000,
+      cautionDeposit: 10000,
+      medicalExam: 300,
+      instituteFee: 1000,
+      studentWellness: 500,
+      extracurricular: 1500,
+      medicalInsurance: 2402,
+      totalFirstSemester: {
+        "2023": { general: 375702, obc: 375702, sc: 16602, st: 16602 },
+        "2024": { general: 425702, obc: 425702, sc: 16602, st: 16602 }
       }
+    }
+  },
+
+  // Executive MBA
+  emba: {
+    courseName: "Executive MBA",
+    duration: "2 years",
+    fees: {
+      tuitionFee: 1350000,
+      developmentAcademics: 25000,
+      totalProgram: 1375000
     }
   },
 
   // PhD Fees
   phd: {
-    courseName: "PhD",
-    duration: "Variable (3-7 years)",
+    courseName: "Ph.D.",
+    duration: "3-7 years",
     fees: {
-      tuitionFee: {
-        general: 25000, // per semester
-        obc: 25000,
-        scSt: 0,
-        economicallyWeaker: 0
-      },
-      fellowship: {
-        junior: 31000, // per month for first 2 years
-        senior: 35000  // per month after 2 years
+      tuitionFee: { general: 5000, obc: 5000, sc: 0, st: 0 },
+      admissionFee: 1500,
+      cautionDeposit: 2000,
+      medicalExam: 300,
+      instituteFee: 1500,
+      studentWellness: 500,
+      extracurricular: 1500,
+      medicalInsurance: 2402,
+      totalFirstSemester: {
+        general: 12602,
+        obc: 12602,
+        sc: 7602,
+        st: 7602
       }
     }
   },
 
-  // Online BS Degree (Programming and Data Science)
-  onlineBs: {
-    courseName: "Online BS in Programming and Data Science",
-    duration: "4 years (8 semesters)",
+  // BS Degree with Application Fee (GEN/OBC/SC/ST/EWS/PwD)
+  bsDegree: {
+    courseName: "BS in Data Science and Programming",
+    duration: "4 years",
     fees: {
       tuitionFee: {
-        general: 25000, // per semester
+        general: 25000,
         obc: 25000,
-        scSt: 12500, // 50% concession
-        economicallyWeaker: 12500,
-        belowPovertyLine: 0
+        sc: 12500,
+        st: 12500,
+        ews: 12500,
+        bpl: 0
       },
       additionalFees: {
-        registration: 1000, // one time
-        examFee: 2000, // per semester
-        certificateFee: 1000 // at completion
+        registration: 1000,    // one time
+        examFee: 2000,         // per semester
+        certificateFee: 1000   // once at completion
       },
       totalPerSemester: {
         general: 28000,
         obc: 28000,
-        scSt: 15500,
-        economicallyWeaker: 15500,
-        belowPovertyLine: 3000
+        sc: 15500,
+        st: 15500,
+        ews: 15500,
+        bpl: 3000
       },
       totalProgram: {
-        general: 224000, // 8 semesters
+        general: 224000,
         obc: 224000,
-        scSt: 124000,
-        economicallyWeaker: 124000,
-        belowPovertyLine: 24000
+        sc: 124000,
+        st: 124000,
+        ews: 124000,
+        bpl: 24000
+      },
+      applicationFee: {
+        general: 3000,
+        obc: 3000,
+        sc: 1500,
+        st: 1500,
+        pwd: 1500,
+        scpwd: 750,
+        stpwd: 750
       }
     },
     scholarships: [
@@ -133,44 +195,35 @@ const feesData = {
     ]
   },
 
-  // Hostel and Mess Fees
+  // Hostel/Mess Fees
   hostelMess: {
-    hostel: {
-      single: 18000, // per semester
-      double: 12000  // per semester
-    },
-    mess: {
-      vegetarian: 45000, // per year
-      nonVegetarian: 50000 // per year
-    },
-    electricity: 2000, // per semester (approx)
-    water: 500 // per semester
+    hostel: { single: 18000, double: 12000 },
+    mess: { veg: 25000, nonVeg: 28000 },
+    electricity: 1400,
+    water: 500
   },
 
-  // International Student Fees (USD)
+  // International Students
   international: {
-    btech: {
-      tuitionFee: 8000, // per year in USD
-      otherFees: 2000
-    },
-    mtech: {
-      tuitionFee: 5000, // per year in USD
-      otherFees: 1500
-    }
+    btech: { tuitionFee: 8000, otherFees: 2000 },
+    mtech: { tuitionFee: 5000, otherFees: 1500 }
   },
 
-  // Additional Information
+  // General notes
   feeStructureInfo: {
     paymentModes: ["Online", "Demand Draft", "Bank Transfer"],
-    installments: "Fees can be paid in 2 installments per year",
+    installments: "Semester-wise payments",
     scholarships: [
       "Merit-cum-Need Scholarship",
-      "MCM Scholarship", 
-      "Inspire Scholarship",
-      "NSP Scholarships",
-      "Institute Freeship"
+      "MCM Scholarship",
+      "Institute Freeship",
+      "SC/ST/OBC/EWS waivers"
     ],
-    lastUpdated: "2024"
+    lastUpdated: "July–Nov 2025",
+    remarks: [
+      "Tuition Fee waiver for SC/ST/EWS/BPL.",
+      "Hostel/Mess fees separate as per hostel circular."
+    ]
   }
 };
 
