@@ -94,6 +94,45 @@ const feesData = {
     }
   },
 
+  // Online BS Degree (Programming and Data Science)
+  onlineBs: {
+    courseName: "Online BS in Programming and Data Science",
+    duration: "4 years (8 semesters)",
+    fees: {
+      tuitionFee: {
+        general: 25000, // per semester
+        obc: 25000,
+        scSt: 12500, // 50% concession
+        economicallyWeaker: 12500,
+        belowPovertyLine: 0
+      },
+      additionalFees: {
+        registration: 1000, // one time
+        examFee: 2000, // per semester
+        certificateFee: 1000 // at completion
+      },
+      totalPerSemester: {
+        general: 28000,
+        obc: 28000,
+        scSt: 15500,
+        economicallyWeaker: 15500,
+        belowPovertyLine: 3000
+      },
+      totalProgram: {
+        general: 224000, // 8 semesters
+        obc: 224000,
+        scSt: 124000,
+        economicallyWeaker: 124000,
+        belowPovertyLine: 24000
+      }
+    },
+    scholarships: [
+      "Merit-based fee waiver for top performers",
+      "Income-based concessions available",
+      "Special provisions for SC/ST/PwD candidates"
+    ]
+  },
+
   // Hostel and Mess Fees
   hostelMess: {
     hostel: {

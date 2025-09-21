@@ -63,7 +63,8 @@ const searchFeesData = (query) => {
   // Check for fee-related keywords
   if (lowerQuery.includes('fee') || lowerQuery.includes('फीस') || 
       lowerQuery.includes('cost') || lowerQuery.includes('charge') ||
-      lowerQuery.includes('payment') || lowerQuery.includes('tuition')) {
+      lowerQuery.includes('payment') || lowerQuery.includes('tuition') ||
+      lowerQuery.includes('degree') || lowerQuery.includes('course')) {
     
     // Check for specific courses
     if (lowerQuery.includes('btech') || lowerQuery.includes('b.tech') || 
@@ -83,6 +84,12 @@ const searchFeesData = (query) => {
     if (lowerQuery.includes('phd') || lowerQuery.includes('doctorate') || 
         lowerQuery.includes('research')) {
       relevantData.phd = feesData.phd;
+    }
+    
+    if (lowerQuery.includes('bs') || lowerQuery.includes('b.s') || 
+        lowerQuery.includes('online') || lowerQuery.includes('programming') ||
+        lowerQuery.includes('data science') || lowerQuery.includes('bachelor')) {
+      relevantData.onlineBs = feesData.onlineBs;
     }
     
     if (lowerQuery.includes('hostel') || lowerQuery.includes('mess') || 
