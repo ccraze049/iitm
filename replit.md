@@ -38,8 +38,9 @@ The following secrets need to be configured in Replit's Secrets tab:
 - Implemented middleware to ensure user registration before chat
 - Bot now provides personalized responses based on user history
 - Disabled startup API test for production efficiency
-- Moved hardcoded secrets to environment variables for security
+- **SECURITY FIX**: Moved hardcoded secrets to environment variables for security
 - Added environment variable validation on startup
+- Fixed critical security vulnerability by removing exposed API keys and tokens
 
 ## Setup Instructions
 1. Users must send /start command to register before chatting

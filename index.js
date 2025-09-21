@@ -8,12 +8,26 @@ const { franc } = require("franc");
 const feesData = require("./fees");
 const centersData = require("./centers");
 
-// --- CONFIGURATION (Hardcoded for Testing) ---
-const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
-const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
+// --- CONFIGURATION ---
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
-const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
+const MONGO_URI = process.env.MONGO_URI;
+
+// Validate required environment variables
+if (!TELEGRAM_TOKEN) {
+  console.error("❌ TELEGRAM_TOKEN environment variable is required");
+  process.exit(1);
+}
+if (!GEMINI_API_KEY) {
+  console.error("❌ GEMINI_API_KEY environment variable is required");
+  process.exit(1);
+}
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI environment variable is required");
+  process.exit(1);
+}
 
 
 // --- MongoDB Setup ---
