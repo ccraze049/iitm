@@ -32,11 +32,3 @@ args = "npm start"
 [deployment]
 deploymentTarget = "vm"
 run = ["npm", "start"]
-
-[[ports]]
-localPort = 5000
-externalPort = 80
-
-[[ports]]
-localPort = 35117
-externalPort = 3000
