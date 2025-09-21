@@ -44,6 +44,8 @@ console.error = (...args) => {
 const app = express();
 const PORT = 5000;
 
+// Middleware for parsing JSON (required for webhooks)
+app.use(express.json());
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
@@ -173,11 +175,22 @@ app.get('/api/logs', (req, res) => {
   res.json({ logs: botLogs, count: botLogs.length });
 });
 
-// Start Express Server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🌐 Dashboard server running on http://0.0.0.0:${PORT}`);
-  console.log(`📊 View logs at: http://0.0.0.0:${PORT}`);
+// Webhook endpoint for Telegram
+app.post('/webhook', (req, res) => {
+  bot.handleUpdate(req.body);
+  res.sendStatus(200);
 });
+
+// For Vercel deployment - check if we're in serverless environment
+const isVercel = process.env.VERCEL || process.env.NOW_REGION;
+
+if (!isVercel) {
+  // Start Express Server locally
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Dashboard server running on http://0.0.0.0:${PORT}`);
+    console.log(`📊 View logs at: http://0.0.0.0:${PORT}`);
+  });
+}
 
 // --- MongoDB Setup ---
 mongoose
@@ -667,5 +680,14 @@ process.once("SIGTERM", () => {
 });
 
 // --- Launch Bot ---
-bot.launch();
-console.log("Telegram IIT Madras AI bot running...");
+if (!isVercel) {
+  // Local development - use long polling
+  bot.launch();
+  console.log("Telegram IIT Madras AI bot running...");
+} else {
+  // Production on Vercel - webhook mode
+  console.log("Bot configured for webhook mode on Vercel");
+}
+
+// Export for Vercel
+module.exports = app;
