@@ -4,13 +4,16 @@ const mongoose = require("mongoose");
 const axios = require("axios");
 const { franc } = require("franc");
 
-// --- CONFIGURATION ---
+// Local Data Files
+const feesData = require("./fees");
+const centersData = require("./centers");
 
-// --- CONFIGURATION (Hardcoded) ---
-const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
-const GEMINI_API_KEY = "AIzaSyDz3YIF97oOAc6DfKDESwV1Kv_PqQnOvFQ";
-const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
+// --- CONFIGURATION ---
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_BASE_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const MONGO_URI = process.env.MONGO_URI;
 
 // Validate required environment variables
 if (!TELEGRAM_TOKEN) {
@@ -64,6 +67,137 @@ const detectLanguage = (text) => {
   const langCode = franc(text);
   if (langCode === "hin") return "Hindi";
   return "English";
+};
+
+// --- Data Filtering Functions ---
+const searchFeesData = (query) => {
+  const lowerQuery = query.toLowerCase();
+  let relevantData = {};
+
+  // Check for fee-related keywords
+  if (lowerQuery.includes('fee') || lowerQuery.includes('फीस') || 
+      lowerQuery.includes('cost') || lowerQuery.includes('charge') ||
+      lowerQuery.includes('payment') || lowerQuery.includes('tuition')) {
+    
+    // Check for specific courses
+    if (lowerQuery.includes('btech') || lowerQuery.includes('b.tech') || 
+        lowerQuery.includes('undergraduate') || lowerQuery.includes('ug')) {
+      relevantData.btech = feesData.btech;
+    }
+    
+    if (lowerQuery.includes('mtech') || lowerQuery.includes('m.tech') || 
+        lowerQuery.includes('postgraduate') || lowerQuery.includes('pg')) {
+      relevantData.mtech = feesData.mtech;
+    }
+    
+    if (lowerQuery.includes('mba')) {
+      relevantData.mba = feesData.mba;
+    }
+    
+    if (lowerQuery.includes('phd') || lowerQuery.includes('doctorate') || 
+        lowerQuery.includes('research')) {
+      relevantData.phd = feesData.phd;
+    }
+    
+    if (lowerQuery.includes('hostel') || lowerQuery.includes('mess') || 
+        lowerQuery.includes('accommodation') || lowerQuery.includes('रहना')) {
+      relevantData.hostelMess = feesData.hostelMess;
+    }
+    
+    if (lowerQuery.includes('international') || lowerQuery.includes('foreign')) {
+      relevantData.international = feesData.international;
+    }
+    
+    // If no specific course mentioned, include general fee info
+    if (Object.keys(relevantData).length === 0) {
+      relevantData = feesData;
+    }
+    
+    // Always include fee structure info for context
+    relevantData.feeStructureInfo = feesData.feeStructureInfo;
+  }
+  
+  return relevantData;
+};
+
+const searchCentersData = (query) => {
+  const lowerQuery = query.toLowerCase();
+  let relevantData = {};
+
+  // Check for location/center-related keywords
+  if (lowerQuery.includes('location') || lowerQuery.includes('center') || 
+      lowerQuery.includes('campus') || lowerQuery.includes('address') ||
+      lowerQuery.includes('where') || lowerQuery.includes('कहाँ') ||
+      lowerQuery.includes('स्थान') || lowerQuery.includes('केंद्र')) {
+    
+    // Main campus
+    if (lowerQuery.includes('main') || lowerQuery.includes('chennai') || 
+        lowerQuery.includes('मुख्य') || lowerQuery.includes('चेन्नई')) {
+      relevantData.mainCampus = centersData.mainCampus;
+    }
+    
+    // Research park
+    if (lowerQuery.includes('research') || lowerQuery.includes('park') || 
+        lowerQuery.includes('company') || lowerQuery.includes('startup')) {
+      relevantData.researchParks = centersData.researchParks;
+    }
+    
+    // Specific cities
+    if (lowerQuery.includes('hyderabad') || lowerQuery.includes('हैदराबाद')) {
+      relevantData.hyderabad = centersData.extensionCenters.hyderabad;
+    }
+    
+    if (lowerQuery.includes('bangalore') || lowerQuery.includes('bengaluru') || 
+        lowerQuery.includes('बैंगलोर')) {
+      relevantData.bangalore = centersData.extensionCenters.bangalore;
+    }
+    
+    if (lowerQuery.includes('sri lanka') || lowerQuery.includes('srilanka') || 
+        lowerQuery.includes('kandy')) {
+      relevantData.srilanka = centersData.international.srilanka;
+    }
+    
+    // Hostels
+    if (lowerQuery.includes('hostel') || lowerQuery.includes('accommodation') || 
+        lowerQuery.includes('रहना') || lowerQuery.includes('छात्रावास')) {
+      relevantData.hostels = centersData.hostels;
+    }
+    
+    // Departments
+    if (lowerQuery.includes('department') || lowerQuery.includes('विभाग')) {
+      relevantData.departments = centersData.departmentLocations;
+      relevantData.mainCampus = centersData.mainCampus;
+    }
+    
+    // Transportation
+    if (lowerQuery.includes('transport') || lowerQuery.includes('bus') || 
+        lowerQuery.includes('metro') || lowerQuery.includes('reach') ||
+        lowerQuery.includes('पहुँचना') || lowerQuery.includes('यातायात')) {
+      relevantData.transportation = centersData.transportation;
+    }
+    
+    // If no specific location mentioned, include main campus and contact info
+    if (Object.keys(relevantData).length === 0) {
+      relevantData.mainCampus = centersData.mainCampus;
+      relevantData.contactInfo = centersData.contactInfo;
+    }
+    
+    // Always include contact info for reference
+    relevantData.contactInfo = centersData.contactInfo;
+  }
+  
+  return relevantData;
+};
+
+const getRelevantLocalData = (query) => {
+  const feesInfo = searchFeesData(query);
+  const centersInfo = searchCentersData(query);
+  
+  return {
+    fees: feesInfo,
+    centers: centersInfo,
+    hasRelevantData: Object.keys(feesInfo).length > 0 || Object.keys(centersInfo).length > 0
+  };
 };
 
 // --- Telegram Formatting Helper ---
@@ -277,12 +411,40 @@ bot.on("text", async (ctx) => {
 
     const language = user.preferredLanguage === 'hindi' ? 'Hindi' : 'English';
 
+    // Get relevant local data based on user question
+    const localData = getRelevantLocalData(question);
+    
+    // Prepare local data section for prompt
+    let localDataSection = '';
+    if (localData.hasRelevantData) {
+      localDataSection = `
+IMPORTANT: Use the following OFFICIAL IIT Madras data to answer user questions:
+
+FEES DATA:
+${Object.keys(localData.fees).length > 0 ? JSON.stringify(localData.fees, null, 2) : 'No fee data relevant to this query'}
+
+CENTERS & LOCATIONS DATA:
+${Object.keys(localData.centers).length > 0 ? JSON.stringify(localData.centers, null, 2) : 'No centers data relevant to this query'}
+
+INSTRUCTIONS FOR USING LOCAL DATA:
+- ALWAYS prioritize this official data over general knowledge
+- Extract specific information from the data above
+- Present the information in a user-friendly way
+- Convert JSON data into readable format
+- Include relevant contact information when available
+`;
+    }
+
     const geminiPrompt = `
 You are an intelligent chatbot specialized in IIT Madras information.
 You have knowledge about courses, departments, admissions, events, faculty, and facilities.
+
+${localDataSection}
+
 Instructions:
 1. Answer the user's question in the same language as the question (${language}).
-2. Always consider the user's previous questions and answers (history) for context.
+2. ALWAYS use the official local data provided above when available for fees and centers information.
+3. Always consider the user's previous questions and answers (history) for context.
 3. If you don't know the answer, politely say you don’t know.
 4. Keep answers concise, clear, and only related to IIT Madras.
 5. Format your answer for Telegram messaging - use simple formatting:
