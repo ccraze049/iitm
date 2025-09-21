@@ -5,9 +5,9 @@ const axios = require("axios");
 const { franc } = require("franc");
 const express = require("express");
 
-// Local Data Files
-const feesData = require("./fees");
-const centersData = require("./centers");
+// Local Data Files (import from parent directory)
+const feesData = require("../fees");
+const centersData = require("../centers");
 
 // --- CONFIGURATION (Hardcoded for Development) ---
 const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
