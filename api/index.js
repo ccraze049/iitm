@@ -477,6 +477,43 @@ async function ensureRegistered(ctx, next) {
 
 bot.use(ensureRegistered);
 
+// --- /language Command Handler ---
+bot.command('language', async (ctx) => {
+  try {
+    const userId = String(ctx.from.id);
+    const user = await User.findOne({ userId });
+    
+    if (!user) {
+      return ctx.reply(
+        "कृपया पहले /start कमांड भेजें। 🚀\n\n" +
+        "Please send /start command first to register!"
+      );
+    }
+
+    const currentLang = user.preferredLanguage === 'hindi' ? 'हिंदी' : 'English';
+    
+    const languageText = 
+      `🌐 भाषा बदलें / Change Language\n\n` +
+      `वर्तमान भाषा / Current Language: ${currentLang}\n\n` +
+      `कृपया अपनी नई भाषा चुनें:\n` +
+      `Please select your new language:`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "🇮🇳 हिंदी (Hindi)", callback_data: "change_lang_hindi" },
+          { text: "🇬🇧 English", callback_data: "change_lang_english" }
+        ]
+      ]
+    };
+
+    await ctx.reply(languageText, { reply_markup: keyboard });
+  } catch (error) {
+    console.error("Language command error:", error);
+    ctx.reply("भाषा बदलने में समस्या हुई। / Language change error.");
+  }
+});
+
 // --- /start Command Handler ---
 bot.start(async (ctx) => {
   try {
@@ -560,6 +597,40 @@ bot.action(['lang_hindi', 'lang_english'], async (ctx) => {
   } catch (error) {
     console.error("Language selection error:", error);
     ctx.reply("भाषा सेटिंग में समस्या हुई। / Language setting error.");
+  }
+});
+
+// --- Language Change Callback Handler ---
+bot.action(['change_lang_hindi', 'change_lang_english'], async (ctx) => {
+  try {
+    const userId = String(ctx.from.id);
+    const selectedLang = ctx.match[0] === 'change_lang_hindi' ? 'hindi' : 'english';
+    
+    // Update user's preferred language
+    await User.findOneAndUpdate(
+      { userId },
+      { preferredLanguage: selectedLang }
+    );
+
+    // Send confirmation message in selected language
+    if (selectedLang === 'hindi') {
+      await ctx.editMessageText(
+        `✅ भाषा बदल दी गई: हिंदी\n\n` +
+        `🎓 अब मैं हिंदी में जवाब दूंगा।\n` +
+        `आप मुझसे IIT मद्रास के बारे में कोई भी सवाल पूछ सकते हैं! 💬`
+      );
+    } else {
+      await ctx.editMessageText(
+        `✅ Language changed: English\n\n` +
+        `🎓 I will now respond in English.\n` +
+        `Ask me anything about IIT Madras! 💬`
+      );
+    }
+
+    console.log(`User ${ctx.from.first_name} (${userId}) changed language to: ${selectedLang}`);
+  } catch (error) {
+    console.error("Language change error:", error);
+    ctx.reply("भाषा बदलने में समस्या हुई। / Language change error.");
   }
 });
 
