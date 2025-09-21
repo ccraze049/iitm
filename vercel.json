@@ -1,34 +1,21 @@
 {
-  "version": 2,
-  "name": "iit-madras-bot",
-  "builds": [
-    {
-      "src": "index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/webhook",
-      "dest": "/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.js"
-    }
-  ],
   "functions": {
     "index.js": {
-      "maxDuration": 10
+      "maxDuration": 30
     }
   },
-  "env": {
-    "TELEGRAM_TOKEN": "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E",
-    "GEMINI_API_KEY": "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw", 
-    "MONGO_URI": "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm"
-  }
+  "rewrites": [
+    {
+      "source": "/webhook",
+      "destination": "/index.js"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.js"
+    }
+  ]
 }
