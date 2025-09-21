@@ -27,8 +27,8 @@
     }
   },
   "env": {
-    "TELEGRAM_TOKEN": ""7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E",
-    "GEMINI_API_KEY": "@gemini_api_key", 
-    "MONGO_URI": "@mongo_uri"
+    "TELEGRAM_TOKEN": "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E",
+    "GEMINI_API_KEY": "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw", 
+    "MONGO_URI": "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm"
   }
 }
