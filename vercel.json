@@ -1,17 +1,15 @@
 {
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 30
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
     }
-  },
-  "rewrites": [
+  ],
+  "routes": [
     {
-      "source": "/webhook",
-      "destination": "/api"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/api"
+      "src": "/(.*)",
+      "dest": "index.js"
     }
   ]
 }
