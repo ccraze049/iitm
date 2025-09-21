@@ -49,7 +49,17 @@ The following secrets need to be configured in Replit's Secrets tab:
 4. MongoDB is connected with optimized indexing for performance
 5. Deploy to production using the configured deployment settings
 
-## Deployment
+## Deployment Options
+
+### Local/Replit Deployment
 - Target: VM (for persistent bot operation)
 - Command: `npm start`
 - The bot runs continuously to handle incoming Telegram messages
+- Dashboard available at port 5000
+
+### Vercel Deployment
+- Added `vercel.json` configuration for serverless deployment
+- Supports both webhook and polling modes
+- Automatic environment detection (Vercel vs local)
+- Webhook endpoint: `/webhook`
+- Same dashboard functionality available
