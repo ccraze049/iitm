@@ -200,8 +200,11 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
-// For Vercel deployment - check if we're in serverless environment
+// Environment detection for different deployment platforms
 const isVercel = process.env.VERCEL || process.env.NOW_REGION;
+const isRender = process.env.RENDER || process.env.RENDER_SERVICE_NAME || process.env.RENDER_EXTERNAL_URL;
+const isProduction = process.env.NODE_ENV === 'production' || isVercel || isRender;
+const webhookDomain = process.env.RENDER_EXTERNAL_URL || process.env.REPL_URL || process.env.VERCEL_URL;
 
 if (!isVercel) {
   // Start Express Server locally
@@ -834,15 +837,75 @@ process.once("SIGTERM", () => {
   mongoose.disconnect();
 });
 
-// --- Launch Bot ---
-if (!isVercel) {
-  // Local development - use long polling
-  bot.launch();
-  console.log("Telegram IIT Madras AI bot running...");
-} else {
-  // Production on Vercel - webhook mode
-  console.log("Bot configured for webhook mode on Vercel");
+// --- Webhook Setup for Production ---
+async function setupWebhook() {
+  if (!webhookDomain) {
+    console.log("[WEBHOOK] No webhook domain configured");
+    return false;
+  }
+  
+  try {
+    const webhookUrl = `${webhookDomain.replace('http://', 'https://')}/webhook`;
+    console.log(`[WEBHOOK] Setting webhook URL: ${webhookUrl}`);
+    
+    // Clear existing webhook first
+    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/deleteWebhook`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Set new webhook
+    const response = await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook`, {
+      url: webhookUrl,
+      drop_pending_updates: true
+    });
+    
+    if (response.data.ok) {
+      console.log("✅ Webhook configured successfully!");
+      return true;
+    } else {
+      console.error("❌ Webhook setup failed:", response.data.description);
+      return false;
+    }
+  } catch (error) {
+    console.error("[WEBHOOK] Setup error:", error.message);
+    return false;
+  }
 }
+
+// --- Smart Bot Launch ---
+async function launchBot() {
+  try {
+    if (isRender) {
+      // Render deployment - use webhook mode
+      console.log("[BOT] 🚀 Render environment detected - configuring webhook mode");
+      const webhookSet = await setupWebhook();
+      if (webhookSet) {
+        console.log("✅ Bot ready to receive webhooks on Render!");
+      } else {
+        console.log("⚠️ Webhook setup failed, but bot can still receive requests via /webhook endpoint");
+      }
+    } else if (isVercel) {
+      // Vercel deployment - webhook mode
+      console.log("[BOT] Vercel environment - webhook mode configured");
+    } else {
+      // Local development - polling mode with retry
+      console.log("[BOT] 🏠 Local environment - starting polling mode");
+      await bot.launch();
+      console.log("✅ Bot running in polling mode!");
+    }
+  } catch (error) {
+    console.error("[BOT] Launch error:", error.message);
+    console.log("[BOT] ℹ️ Bot may still work via webhook endpoint at /webhook");
+  }
+}
+
+// Initialize bot with delay
+console.log(`[STARTUP] Environment: ${isRender ? 'Render' : isVercel ? 'Vercel' : 'Local'}`);
+const startupDelay = isProduction ? 3000 : 1000;
+console.log(`[STARTUP] Waiting ${startupDelay}ms before initialization...`);
+
+setTimeout(() => {
+  launchBot();
+}, startupDelay);
 
 // Export for Vercel
 module.exports = app;
