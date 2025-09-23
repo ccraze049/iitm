@@ -2,19 +2,38 @@
 const { Telegraf } = require("telegraf");
 const mongoose = require("mongoose");
 const axios = require("axios");
-const { franc } = require("franc");
+// Dynamic import for franc (ESM module)
+let franc;
+(async () => {
+  const francModule = await import('franc');
+  franc = francModule.franc;
+})();
 const express = require("express");
 
 // Local Data Files (import from parent directory)
 const feesData = require("../fees");
 const centersData = require("../centers");
 
-// --- CONFIGURATION (Hardcoded for Development) ---
+// --- CONFIGURATION (Multiple API Key System) ---
 const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
-const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
-const GEMINI_BASE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
+// Multiple Gemini API Keys for load balancing
+const GEMINI_API_KEYS = [
+  "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw",
+  "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw", // Add more keys here
+  "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw"
+];
+
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
+
+// API Key rotation system
+let currentKeyIndex = 0;
+const getNextGeminiApiKey = () => {
+  const key = GEMINI_API_KEYS[currentKeyIndex];
+  currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
+  return key;
+};
 
 // --- Logs Storage ---
 const botLogs = [];
@@ -226,6 +245,11 @@ const Message = mongoose.model("Message", messageSchema);
 
 // --- Language Detection ---
 const detectLanguage = (text) => {
+  if (!franc) {
+    // Fallback to basic detection if franc not loaded yet
+    const hindiPattern = /[\u0900-\u097F]/;
+    return hindiPattern.test(text) ? "Hindi" : "English";
+  }
   const langCode = franc(text);
   if (langCode === "hin") return "Hindi";
   return "English";
@@ -406,9 +430,9 @@ const formatForTelegram = (text) => {
 let lastGeminiCall = 0;
 const GEMINI_RATE_LIMIT = 2000; // 2 seconds between calls
 
-// --- Improved Gemini API Handler with Rate Limiting ---
-async function callGemini(prompt, retryCount = 0) {
-  const maxRetries = 3;
+// --- Improved Gemini API Handler with Multiple API Keys ---
+async function callGemini(prompt, retryCount = 0, failedKeys = new Set()) {
+  const maxRetries = GEMINI_API_KEYS.length * 2; // Allow more retries with multiple keys
   
   try {
     // Rate limiting - ensure minimum time between API calls
@@ -420,6 +444,16 @@ async function callGemini(prompt, retryCount = 0) {
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     lastGeminiCall = Date.now();
+    
+    // Get next API key (skip failed ones if possible)
+    let currentApiKey = getNextGeminiApiKey();
+    let attempts = 0;
+    while (failedKeys.has(currentApiKey) && attempts < GEMINI_API_KEYS.length) {
+      currentApiKey = getNextGeminiApiKey();
+      attempts++;
+    }
+    
+    console.log(`[GEMINI API] Using key ${currentKeyIndex}/${GEMINI_API_KEYS.length}`);
     
     const response = await axios.post(
       GEMINI_BASE_URL,
@@ -433,7 +467,7 @@ async function callGemini(prompt, retryCount = 0) {
       {
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
+          "x-goog-api-key": currentApiKey,
         },
         timeout: 30000, // Reduced timeout for cloud deployment
       },
@@ -451,17 +485,29 @@ async function callGemini(prompt, retryCount = 0) {
     
     console.error(`[GEMINI API] Error ${status}: ${message}`);
     
-    // Handle specific error codes
-    if (status === 429 && retryCount < maxRetries) {
-      // Rate limit exceeded - retry with exponential backoff
-      const backoffTime = Math.pow(2, retryCount) * 5000; // 5s, 10s, 20s
-      console.log(`[RETRY ${retryCount + 1}/${maxRetries}] Rate limited, waiting ${backoffTime}ms`);
-      await new Promise(resolve => setTimeout(resolve, backoffTime));
-      return callGemini(prompt, retryCount + 1);
+    // Mark current key as failed for quota/auth errors
+    if (status === 429 || status === 403) {
+      failedKeys.add(getNextGeminiApiKey());
+      console.log(`[API KEY] Marked key as failed. ${failedKeys.size}/${GEMINI_API_KEYS.length} keys failed`);
     }
     
-    if (status === 403) {
-      return "API key quota exceeded. Please try again later.";
+    // Handle specific error codes
+    if ((status === 429 || status === 403) && retryCount < maxRetries && failedKeys.size < GEMINI_API_KEYS.length) {
+      // Try next API key immediately for quota/auth errors
+      console.log(`[RETRY ${retryCount + 1}/${maxRetries}] Trying next API key...`);
+      return callGemini(prompt, retryCount + 1, failedKeys);
+    }
+    
+    if (status === 429 && retryCount < maxRetries) {
+      // Rate limit exceeded - retry with exponential backoff
+      const backoffTime = Math.pow(2, retryCount) * 3000; // 3s, 6s, 12s
+      console.log(`[RETRY ${retryCount + 1}/${maxRetries}] Rate limited, waiting ${backoffTime}ms`);
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
+      return callGemini(prompt, retryCount + 1, failedKeys);
+    }
+    
+    if (status === 403 && failedKeys.size >= GEMINI_API_KEYS.length) {
+      return "All API keys quota exceeded. Please try again later.";
     }
     
     if (status === 400) {
