@@ -834,15 +834,45 @@ process.once("SIGTERM", () => {
   mongoose.disconnect();
 });
 
-// --- Launch Bot ---
-if (!isVercel) {
-  // Local development - use long polling
-  bot.launch();
-  console.log("Telegram IIT Madras AI bot running...");
-} else {
-  // Production on Vercel - webhook mode
-  console.log("Bot configured for webhook mode on Vercel");
+// --- Launch Bot with Retry Logic ---
+async function launchBot(retryCount = 0) {
+  const maxRetries = 5;
+  const baseDelay = 2000; // 2 seconds
+  
+  try {
+    if (!isVercel) {
+      // Local development - use long polling with retry logic
+      console.log(`[BOT LAUNCH] Attempt ${retryCount + 1}/${maxRetries + 1} - Starting Telegram bot...`);
+      await bot.launch();
+      console.log("✅ Telegram IIT Madras AI bot running successfully!");
+    } else {
+      // Production on Vercel - webhook mode
+      console.log("Bot configured for webhook mode on Vercel");
+    }
+  } catch (error) {
+    console.error(`[BOT LAUNCH] Error on attempt ${retryCount + 1}:`, error.message);
+    
+    if (retryCount < maxRetries) {
+      const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+      console.log(`[BOT LAUNCH] Retrying in ${delay}ms... (${retryCount + 1}/${maxRetries})`);
+      
+      setTimeout(() => {
+        launchBot(retryCount + 1);
+      }, delay);
+    } else {
+      console.error("❌ Failed to launch bot after maximum retries. Bot may still work via webhooks.");
+      // Don't exit the process - server should still be available for webhooks
+    }
+  }
 }
+
+// Add initial delay for deployment environments
+const startupDelay = process.env.NODE_ENV === 'production' ? 3000 : 1000;
+console.log(`[STARTUP] Waiting ${startupDelay}ms before bot initialization...`);
+
+setTimeout(() => {
+  launchBot();
+}, startupDelay);
 
 // Export for Vercel
 module.exports = app;
