@@ -32,8 +32,12 @@ outputType = "webview"
 
 [deployment]
 deploymentTarget = "vm"
-run = ["npm"]
+run = ["npm", "start"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 40583
+externalPort = 3000

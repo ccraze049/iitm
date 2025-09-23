@@ -9,26 +9,12 @@ const express = require("express");
 const feesData = require("../fees");
 const centersData = require("../centers");
 
-// --- CONFIGURATION (Using Environment Variables for Security) ---
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// --- CONFIGURATION (Hardcoded for Development) ---
+const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
+const GEMINI_API_KEY = "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw";
 const GEMINI_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
-const MONGO_URI = process.env.MONGO_URI;
-
-// Validate required environment variables
-if (!TELEGRAM_TOKEN) {
-  console.error("❌ TELEGRAM_TOKEN environment variable is required");
-  process.exit(1);
-}
-if (!GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY environment variable is required");
-  process.exit(1);
-}
-if (!MONGO_URI) {
-  console.error("❌ MONGO_URI environment variable is required");
-  process.exit(1);
-}
+const MONGO_URI = "mongodb+srv://codeyogiai_db_user:EbyqKN8BUbfcrqcZ@iitm.qpgyazn.mongodb.net/?retryWrites=true&w=majority&appName=Iitm";
 
 // --- Logs Storage ---
 const botLogs = [];
@@ -416,9 +402,25 @@ const formatForTelegram = (text) => {
   return formatted.trim();
 };
 
-// --- Gemini API Handler ---
-async function callGemini(prompt) {
+// --- Rate Limiting Helper ---
+let lastGeminiCall = 0;
+const GEMINI_RATE_LIMIT = 2000; // 2 seconds between calls
+
+// --- Improved Gemini API Handler with Rate Limiting ---
+async function callGemini(prompt, retryCount = 0) {
+  const maxRetries = 3;
+  
   try {
+    // Rate limiting - ensure minimum time between API calls
+    const now = Date.now();
+    const timeSinceLastCall = now - lastGeminiCall;
+    if (timeSinceLastCall < GEMINI_RATE_LIMIT) {
+      const waitTime = GEMINI_RATE_LIMIT - timeSinceLastCall;
+      console.log(`[RATE LIMIT] Waiting ${waitTime}ms before API call`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    lastGeminiCall = Date.now();
+    
     const response = await axios.post(
       GEMINI_BASE_URL,
       {
@@ -433,7 +435,7 @@ async function callGemini(prompt) {
           "Content-Type": "application/json",
           "x-goog-api-key": GEMINI_API_KEY,
         },
-        timeout: 60000,
+        timeout: 30000, // Reduced timeout for cloud deployment
       },
     );
     
@@ -441,11 +443,33 @@ async function callGemini(prompt) {
     if (aiResponse) {
       return aiResponse;
     } else {
-      return "मुझे इसका उत्तर नहीं पता।";
+      return "Sorry, I couldn't process your request. Please try again.";
     }
   } catch (error) {
-    console.error("Gemini API Error:", error.response?.status || error.message);
-    return "मुझे इसका उत्तर नहीं पता।";
+    const status = error.response?.status;
+    const message = error.message;
+    
+    console.error(`[GEMINI API] Error ${status}: ${message}`);
+    
+    // Handle specific error codes
+    if (status === 429 && retryCount < maxRetries) {
+      // Rate limit exceeded - retry with exponential backoff
+      const backoffTime = Math.pow(2, retryCount) * 5000; // 5s, 10s, 20s
+      console.log(`[RETRY ${retryCount + 1}/${maxRetries}] Rate limited, waiting ${backoffTime}ms`);
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
+      return callGemini(prompt, retryCount + 1);
+    }
+    
+    if (status === 403) {
+      return "API key quota exceeded. Please try again later.";
+    }
+    
+    if (status === 400) {
+      return "Invalid request. Please rephrase your question.";
+    }
+    
+    // Generic fallback for all other errors
+    return "I'm having trouble connecting to the AI service. Please try again later.";
   }
 }
 
