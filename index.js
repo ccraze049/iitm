@@ -15,7 +15,7 @@ const feesData = require("./fees");
 const centersData = require("./centers");
 
 // --- CONFIGURATION (Multiple API Key System) ---
-const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
+const TELEGRAM_TOKEN = "7673072912:AAE-0YQIGMppbzZ9zMS5jHRFSW-MHpJENM4";
 
 // Multiple Gemini API Keys for load balancing
 const GEMINI_API_KEYS = [
