@@ -481,6 +481,11 @@ async function callGemini(prompt, retryCount = 0, failedKeys = new Set()) {
       return callGemini(prompt, retryCount + 1, failedKeys);
     }
     
+    // Return better error messages based on error type
+    if (status === 429 || status === 403) {
+      return "API quota exceeded. Please try again later.";
+    }
+    
     return "मुझे इसका उत्तर नहीं पता।";
   }
 }
@@ -569,7 +574,9 @@ bot.start(async (ctx) => {
   try {
     const user = await registerUser(ctx);
     if (!user) {
-      return ctx.reply("रजिस्ट्रेशन में समस्या हुई। कृपया दोबारा कोशिश करें।");
+      return ctx.reply("रजिस्ट्रेशन में समस्या हुई। कृपया दोबारा कोशिश करें।").catch(err => {
+        console.error("Failed to send registration error message:", err.message);
+      });
     }
 
     const firstName = user.firstName || "Friend";
@@ -581,7 +588,9 @@ bot.start(async (ctx) => {
         ? `👋 स्वागत है ${firstName}!\n\nIIT मद्रास के बारे में कोई भी सवाल पूछें! 📚`
         : `👋 Welcome back ${firstName}!\n\nAsk me anything about IIT Madras! 📚`;
       
-      await ctx.reply(welcomeMsg);
+      await ctx.reply(welcomeMsg).catch(err => {
+        console.error("Failed to send welcome message:", err.message);
+      });
     } else {
       // New user or user without language preference - show language selection
       const welcomeText = 
@@ -600,11 +609,18 @@ bot.start(async (ctx) => {
         ]
       };
 
-      await ctx.reply(welcomeText, { reply_markup: keyboard });
+      await ctx.reply(welcomeText, { reply_markup: keyboard }).catch(err => {
+        console.error("Failed to send language selection:", err.message);
+      });
     }
   } catch (error) {
-    console.error("Start command error:", error);
-    ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
+    console.error("Start command error:", error.message);
+    // Don't try to reply if user blocked the bot
+    if (error.response?.error_code !== 403) {
+      ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।").catch(err => {
+        console.error("Failed to send error message:", err.message);
+      });
+    }
   }
 });
 
@@ -772,6 +788,13 @@ Your Answer:
 
     // Format answer for Telegram compatibility
     answer = formatForTelegram(answer);
+    
+    // Check if Gemini API failed with quota message
+    if (answer.includes("quota exceeded") || answer.includes("try again later")) {
+      answer = user.preferredLanguage === 'hindi' 
+        ? "⚠️ सिस्टम अभी व्यस्त है। कृपया कुछ देर बाद फिर से प्रयास करें।\n\nSystem is currently busy. Please try again in a few moments."
+        : "⚠️ System is currently busy. Please try again in a few moments.\n\nसिस्टम अभी व्यस्त है। कृपया कुछ देर बाद फिर से प्रयास करें।";
+    }
 
     // Save Q&A to DB
     await Message.create({ userId, question, answer, timestamp: new Date() });
@@ -785,9 +808,20 @@ Your Answer:
       { parse_mode: 'Markdown' }
     );
   } catch (err) {
-    console.error(err);
-    ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
+    console.error("Message handler error:", err.message);
+    // Don't try to reply if user blocked the bot
+    if (err.response?.error_code !== 403) {
+      ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।").catch(replyErr => {
+        console.error("Failed to send error message:", replyErr.message);
+      });
+    }
   }
+});
+
+// --- Global Error Handler ---
+bot.catch((err, ctx) => {
+  console.error(`Global bot error for ${ctx.updateType}:`, err.message);
+  // Log but don't crash
 });
 
 // --- Clean Shutdown ---
