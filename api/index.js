@@ -15,13 +15,13 @@ const feesData = require("../fees");
 const centersData = require("../centers");
 
 // --- CONFIGURATION (Multiple API Key System) ---
-const TELEGRAM_TOKEN = "7673072912:AAE2jkuvfU69hy4Z0nz-qmySf2uXkb5vw1E";
+const TELEGRAM_TOKEN = "7673072912:AAE-0YQIGMppbzZ9zMS5jHRFSW-MHpJENM4";
 
 // Multiple Gemini API Keys for load balancing
 const GEMINI_API_KEYS = [
-  "AIzaSyCNzm-bOgTEJGuntyHGIag2qkSbhYqYvpQ",
-  "AIzaSyB9kKwwRXJ10nN3sjGXFGpYwhk0TuXjQl4",
-  "AIzaSyAnBwpxQlkdh1ekLSRj-bZ0XWanzOqrGNw"
+  "AIzaSyBAuLQVSFEc-n6B0PwJkzBSYaHpZUapX3k",
+  "AIzaSyDj5Zc5ltsczQdwIdDsX4BPz3TwCHuYIhw",
+  "AIzaSyBjZ3W9JJpUr7pEEl-IWG-oMmpdkTLs3T0",
 ];
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -200,11 +200,8 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
-// Environment detection for different deployment platforms
+// For Vercel deployment - check if we're in serverless environment
 const isVercel = process.env.VERCEL || process.env.NOW_REGION;
-const isRender = process.env.RENDER || process.env.RENDER_SERVICE_NAME || process.env.RENDER_EXTERNAL_URL;
-const isProduction = process.env.NODE_ENV === 'production' || isVercel || isRender;
-const webhookDomain = process.env.RENDER_EXTERNAL_URL || process.env.REPL_URL || process.env.VERCEL_URL;
 
 if (!isVercel) {
   // Start Express Server locally
@@ -429,25 +426,11 @@ const formatForTelegram = (text) => {
   return formatted.trim();
 };
 
-// --- Rate Limiting Helper ---
-let lastGeminiCall = 0;
-const GEMINI_RATE_LIMIT = 2000; // 2 seconds between calls
-
-// --- Improved Gemini API Handler with Multiple API Keys ---
+// --- Gemini API Handler with Multiple Keys ---
 async function callGemini(prompt, retryCount = 0, failedKeys = new Set()) {
-  const maxRetries = GEMINI_API_KEYS.length * 2; // Allow more retries with multiple keys
+  const maxRetries = GEMINI_API_KEYS.length * 2;
   
   try {
-    // Rate limiting - ensure minimum time between API calls
-    const now = Date.now();
-    const timeSinceLastCall = now - lastGeminiCall;
-    if (timeSinceLastCall < GEMINI_RATE_LIMIT) {
-      const waitTime = GEMINI_RATE_LIMIT - timeSinceLastCall;
-      console.log(`[RATE LIMIT] Waiting ${waitTime}ms before API call`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-    lastGeminiCall = Date.now();
-    
     // Get next API key (skip failed ones if possible)
     let currentApiKey = getNextGeminiApiKey();
     let attempts = 0;
@@ -472,7 +455,7 @@ async function callGemini(prompt, retryCount = 0, failedKeys = new Set()) {
           "Content-Type": "application/json",
           "x-goog-api-key": currentApiKey,
         },
-        timeout: 30000, // Reduced timeout for cloud deployment
+        timeout: 60000,
       },
     );
     
@@ -480,13 +463,11 @@ async function callGemini(prompt, retryCount = 0, failedKeys = new Set()) {
     if (aiResponse) {
       return aiResponse;
     } else {
-      return "Sorry, I couldn't process your request. Please try again.";
+      return "मुझे इसका उत्तर नहीं पता।";
     }
   } catch (error) {
     const status = error.response?.status;
-    const message = error.message;
-    
-    console.error(`[GEMINI API] Error ${status}: ${message}`);
+    console.error("Gemini API Error:", status || error.message);
     
     // Mark current key as failed for quota/auth errors
     if (status === 429 || status === 403) {
@@ -494,31 +475,18 @@ async function callGemini(prompt, retryCount = 0, failedKeys = new Set()) {
       console.log(`[API KEY] Marked key as failed. ${failedKeys.size}/${GEMINI_API_KEYS.length} keys failed`);
     }
     
-    // Handle specific error codes
+    // Retry with next key if available
     if ((status === 429 || status === 403) && retryCount < maxRetries && failedKeys.size < GEMINI_API_KEYS.length) {
-      // Try next API key immediately for quota/auth errors
       console.log(`[RETRY ${retryCount + 1}/${maxRetries}] Trying next API key...`);
       return callGemini(prompt, retryCount + 1, failedKeys);
     }
     
-    if (status === 429 && retryCount < maxRetries) {
-      // Rate limit exceeded - retry with exponential backoff
-      const backoffTime = Math.pow(2, retryCount) * 3000; // 3s, 6s, 12s
-      console.log(`[RETRY ${retryCount + 1}/${maxRetries}] Rate limited, waiting ${backoffTime}ms`);
-      await new Promise(resolve => setTimeout(resolve, backoffTime));
-      return callGemini(prompt, retryCount + 1, failedKeys);
+    // Return better error messages based on error type
+    if (status === 429 || status === 403) {
+      return "API quota exceeded. Please try again later.";
     }
     
-    if (status === 403 && failedKeys.size >= GEMINI_API_KEYS.length) {
-      return "All API keys quota exceeded. Please try again later.";
-    }
-    
-    if (status === 400) {
-      return "Invalid request. Please rephrase your question.";
-    }
-    
-    // Generic fallback for all other errors
-    return "I'm having trouble connecting to the AI service. Please try again later.";
+    return "मुझे इसका उत्तर नहीं पता।";
   }
 }
 
@@ -606,7 +574,9 @@ bot.start(async (ctx) => {
   try {
     const user = await registerUser(ctx);
     if (!user) {
-      return ctx.reply("रजिस्ट्रेशन में समस्या हुई। कृपया दोबारा कोशिश करें।");
+      return ctx.reply("रजिस्ट्रेशन में समस्या हुई। कृपया दोबारा कोशिश करें।").catch(err => {
+        console.error("Failed to send registration error message:", err.message);
+      });
     }
 
     const firstName = user.firstName || "Friend";
@@ -618,7 +588,9 @@ bot.start(async (ctx) => {
         ? `👋 स्वागत है ${firstName}!\n\nIIT मद्रास के बारे में कोई भी सवाल पूछें! 📚`
         : `👋 Welcome back ${firstName}!\n\nAsk me anything about IIT Madras! 📚`;
       
-      await ctx.reply(welcomeMsg);
+      await ctx.reply(welcomeMsg).catch(err => {
+        console.error("Failed to send welcome message:", err.message);
+      });
     } else {
       // New user or user without language preference - show language selection
       const welcomeText = 
@@ -637,11 +609,18 @@ bot.start(async (ctx) => {
         ]
       };
 
-      await ctx.reply(welcomeText, { reply_markup: keyboard });
+      await ctx.reply(welcomeText, { reply_markup: keyboard }).catch(err => {
+        console.error("Failed to send language selection:", err.message);
+      });
     }
   } catch (error) {
-    console.error("Start command error:", error);
-    ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
+    console.error("Start command error:", error.message);
+    // Don't try to reply if user blocked the bot
+    if (error.response?.error_code !== 403) {
+      ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।").catch(err => {
+        console.error("Failed to send error message:", err.message);
+      });
+    }
   }
 });
 
@@ -809,6 +788,13 @@ Your Answer:
 
     // Format answer for Telegram compatibility
     answer = formatForTelegram(answer);
+    
+    // Check if Gemini API failed with quota message
+    if (answer.includes("quota exceeded") || answer.includes("try again later")) {
+      answer = user.preferredLanguage === 'hindi' 
+        ? "⚠️ सिस्टम अभी व्यस्त है। कृपया कुछ देर बाद फिर से प्रयास करें।\n\nSystem is currently busy. Please try again in a few moments."
+        : "⚠️ System is currently busy. Please try again in a few moments.\n\nसिस्टम अभी व्यस्त है। कृपया कुछ देर बाद फिर से प्रयास करें।";
+    }
 
     // Save Q&A to DB
     await Message.create({ userId, question, answer, timestamp: new Date() });
@@ -822,9 +808,20 @@ Your Answer:
       { parse_mode: 'Markdown' }
     );
   } catch (err) {
-    console.error(err);
-    ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।");
+    console.error("Message handler error:", err.message);
+    // Don't try to reply if user blocked the bot
+    if (err.response?.error_code !== 403) {
+      ctx.reply("कुछ गलती हो गई। कृपया बाद में प्रयास करें।").catch(replyErr => {
+        console.error("Failed to send error message:", replyErr.message);
+      });
+    }
   }
+});
+
+// --- Global Error Handler ---
+bot.catch((err, ctx) => {
+  console.error(`Global bot error for ${ctx.updateType}:`, err.message);
+  // Log but don't crash
 });
 
 // --- Clean Shutdown ---
@@ -837,71 +834,41 @@ process.once("SIGTERM", () => {
   mongoose.disconnect();
 });
 
-// --- Webhook Setup for Production ---
-async function setupWebhook() {
-  if (!webhookDomain) {
-    console.log("[WEBHOOK] No webhook domain configured");
-    return false;
-  }
+// --- Launch Bot with Retry Logic ---
+async function launchBot(retryCount = 0) {
+  const maxRetries = 5;
+  const baseDelay = 2000; // 2 seconds
   
   try {
-    const webhookUrl = `${webhookDomain.replace('http://', 'https://')}/webhook`;
-    console.log(`[WEBHOOK] Setting webhook URL: ${webhookUrl}`);
-    
-    // Clear existing webhook first
-    await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/deleteWebhook`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Set new webhook
-    const response = await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook`, {
-      url: webhookUrl,
-      drop_pending_updates: true
-    });
-    
-    if (response.data.ok) {
-      console.log("✅ Webhook configured successfully!");
-      return true;
-    } else {
-      console.error("❌ Webhook setup failed:", response.data.description);
-      return false;
-    }
-  } catch (error) {
-    console.error("[WEBHOOK] Setup error:", error.message);
-    return false;
-  }
-}
-
-// --- Smart Bot Launch ---
-async function launchBot() {
-  try {
-    if (isRender) {
-      // Render deployment - use webhook mode
-      console.log("[BOT] 🚀 Render environment detected - configuring webhook mode");
-      const webhookSet = await setupWebhook();
-      if (webhookSet) {
-        console.log("✅ Bot ready to receive webhooks on Render!");
-      } else {
-        console.log("⚠️ Webhook setup failed, but bot can still receive requests via /webhook endpoint");
-      }
-    } else if (isVercel) {
-      // Vercel deployment - webhook mode
-      console.log("[BOT] Vercel environment - webhook mode configured");
-    } else {
-      // Local development - polling mode with retry
-      console.log("[BOT] 🏠 Local environment - starting polling mode");
+    if (!isVercel) {
+      // Local development - use long polling with retry logic
+      console.log(`[BOT LAUNCH] Attempt ${retryCount + 1}/${maxRetries + 1} - Starting Telegram bot...`);
       await bot.launch();
-      console.log("✅ Bot running in polling mode!");
+      console.log("✅ Telegram IIT Madras AI bot running successfully!");
+    } else {
+      // Production on Vercel - webhook mode
+      console.log("Bot configured for webhook mode on Vercel");
     }
   } catch (error) {
-    console.error("[BOT] Launch error:", error.message);
-    console.log("[BOT] ℹ️ Bot may still work via webhook endpoint at /webhook");
+    console.error(`[BOT LAUNCH] Error on attempt ${retryCount + 1}:`, error.message);
+    
+    if (retryCount < maxRetries) {
+      const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+      console.log(`[BOT LAUNCH] Retrying in ${delay}ms... (${retryCount + 1}/${maxRetries})`);
+      
+      setTimeout(() => {
+        launchBot(retryCount + 1);
+      }, delay);
+    } else {
+      console.error("❌ Failed to launch bot after maximum retries. Bot may still work via webhooks.");
+      // Don't exit the process - server should still be available for webhooks
+    }
   }
 }
 
-// Initialize bot with delay
-console.log(`[STARTUP] Environment: ${isRender ? 'Render' : isVercel ? 'Vercel' : 'Local'}`);
-const startupDelay = isProduction ? 3000 : 1000;
-console.log(`[STARTUP] Waiting ${startupDelay}ms before initialization...`);
+// Add initial delay for deployment environments
+const startupDelay = process.env.NODE_ENV === 'production' ? 3000 : 1000;
+console.log(`[STARTUP] Waiting ${startupDelay}ms before bot initialization...`);
 
 setTimeout(() => {
   launchBot();
