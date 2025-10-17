@@ -840,14 +840,27 @@ async function launchBot(retryCount = 0) {
   const baseDelay = 2000; // 2 seconds
   
   try {
-    if (!isVercel) {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER || isVercel;
+    
+    if (isProduction) {
+      // Production - use webhook mode
+      console.log("✅ Bot configured for webhook mode (production)");
+      console.log("Webhook endpoint ready at /webhook");
+      
+      // Set webhook URL if WEBHOOK_URL is provided
+      if (process.env.WEBHOOK_URL) {
+        const webhookUrl = `${process.env.WEBHOOK_URL}/webhook`;
+        await bot.telegram.setWebhook(webhookUrl);
+        console.log(`Webhook set to: ${webhookUrl}`);
+      }
+    } else {
       // Local development - use long polling with retry logic
       console.log(`[BOT LAUNCH] Attempt ${retryCount + 1}/${maxRetries + 1} - Starting Telegram bot...`);
+      
+      // Delete webhook to use polling
+      await bot.telegram.deleteWebhook();
       await bot.launch();
-      console.log("✅ Telegram IIT Madras AI bot running successfully!");
-    } else {
-      // Production on Vercel - webhook mode
-      console.log("Bot configured for webhook mode on Vercel");
+      console.log("✅ Telegram IIT Madras AI bot running successfully in polling mode!");
     }
   } catch (error) {
     console.error(`[BOT LAUNCH] Error on attempt ${retryCount + 1}:`, error.message);
