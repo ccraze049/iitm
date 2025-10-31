@@ -630,6 +630,9 @@ bot.action(['lang_hindi', 'lang_english'], async (ctx) => {
     const userId = String(ctx.from.id);
     const selectedLang = ctx.match[0] === 'lang_hindi' ? 'hindi' : 'english';
     
+    // Answer callback query to remove loading state
+    await ctx.answerCbQuery();
+    
     // Update user's preferred language
     await User.findOneAndUpdate(
       { userId },
@@ -662,6 +665,7 @@ bot.action(['lang_hindi', 'lang_english'], async (ctx) => {
     console.log(`User ${ctx.from.first_name} (${userId}) selected language: ${selectedLang}`);
   } catch (error) {
     console.error("Language selection error:", error);
+    await ctx.answerCbQuery();
     ctx.reply("भाषा सेटिंग में समस्या हुई। / Language setting error.");
   }
 });
@@ -671,6 +675,9 @@ bot.action(['change_lang_hindi', 'change_lang_english'], async (ctx) => {
   try {
     const userId = String(ctx.from.id);
     const selectedLang = ctx.match[0] === 'change_lang_hindi' ? 'hindi' : 'english';
+    
+    // Answer callback query to remove loading state
+    await ctx.answerCbQuery();
     
     // Update user's preferred language
     await User.findOneAndUpdate(
@@ -696,6 +703,7 @@ bot.action(['change_lang_hindi', 'change_lang_english'], async (ctx) => {
     console.log(`User ${ctx.from.first_name} (${userId}) changed language to: ${selectedLang}`);
   } catch (error) {
     console.error("Language change error:", error);
+    await ctx.answerCbQuery();
     ctx.reply("भाषा बदलने में समस्या हुई। / Language change error.");
   }
 });
