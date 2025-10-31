@@ -22,8 +22,7 @@ const GEMINI_API_KEYS = [
   "AIzaSyB9kKwwRXJ10nN3sjGXFGpYwhk0TuXjQl4",
   "AIzaSyBSyhXwmY1e1b7F_R90Jdu0cuhIG8bCTf4",
   "AIzaSyDLYSYY4n2yDJlHVxhSdBUmsKoKJAVHoOg",
-  "AIzaSyDj5Zc5ltsczQdwIdDsX4BPz3TwCHuYIhw",
-  "AIzaSyBjZ3W9JJpUr7pEEl-IWG-oMmpdkTLs3T0",
+  "AIzaSyBjZ3W9JJpUr7pEEl-IWG-oMmpdkTLs3T0"
 ];
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
