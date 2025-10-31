@@ -19,7 +19,8 @@ const TELEGRAM_TOKEN = "7673072912:AAE-0YQIGMppbzZ9zMS5jHRFSW-MHpJENM4";
 
 // Multiple Gemini API Keys for load balancing
 const GEMINI_API_KEYS = [
-  "AIzaSyBAuLQVSFEc-n6B0PwJkzBSYaHpZUapX3k",
+  "AIzaSyB9kKwwRXJ10nN3sjGXFGpYwhk0TuXjQl4",
+  "AIzaSyDLYSYY4n2yDJlHVxhSdBUmsKoKJAVHoOg",
   "AIzaSyDj5Zc5ltsczQdwIdDsX4BPz3TwCHuYIhw",
   "AIzaSyBjZ3W9JJpUr7pEEl-IWG-oMmpdkTLs3T0",
 ];
